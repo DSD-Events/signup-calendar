@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EventCrew — Team Signup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  /* ============================================================
+     CONFIGURATION — replace these two values after Supabase setup
+     See SETUP-GUIDE.md for instructions
+  ============================================================ */
+  :root {
+    --supabase-url: 'YOUR_SUPABASE_URL';
+    --supabase-key: 'YOUR_SUPABASE_ANON_KEY';
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0e0f11;
+    --bg2: #16181c;
+    --bg3: #1e2026;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #f0f0ee;
+    --text2: #9b9b96;
+    --text3: #5c5c58;
+    --green: #1fd18a;
+    --green-dim: rgba(31,209,138,0.12);
+    --green-border: rgba(31,209,138,0.3);
+    --red: #f05b5b;
+    --red-dim: rgba(240,91,91,0.1);
+    --amber: #f0a832;
+    --amber-dim: rgba(240,168,50,0.1);
+    --radius: 10px;
+    --radius-lg: 14px;
+  }
+
+  html { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; line-height: 1.6; }
+
+  body { min-height: 100vh; }
+
+  /* Layout */
+  .app { max-width: 760px; margin: 0 auto; padding: 0 1rem 4rem; }
+
+  /* Header */
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.5rem 0 1.25rem;
+    border-bottom: 0.5px solid var(--border);
+    margin-bottom: 2rem;
+    position: sticky; top: 0; background: var(--bg); z-index: 10;
+  }
+  .logo { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; display: flex; align-items: center; gap: 8px; }
+  .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); display: inline-block; box-shadow: 0 0 8px var(--green); }
+
+  /* Buttons */
+  .btn {
+    padding: 7px 16px; border-radius: var(--radius); border: 0.5px solid var(--border2);
+    background: transparent; cursor: pointer; font-size: 13px; font-family: 'DM Sans', sans-serif;
+    color: var(--text2); transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn:hover { background: var(--bg3); color: var(--text); border-color: var(--border2); }
+  .btn-primary { background: var(--green); border-color: var(--green); color: #0a2618; font-weight: 600; }
+  .btn-primary:hover { background: #25e897; border-color: #25e897; color: #0a2618; }
+  .btn-danger { color: var(--red); border-color: rgba(240,91,91,0.3); }
+  .btn-danger:hover { background: var(--red-dim); }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Cards */
+  .card {
+    background: var(--bg2); border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg); padding: 1.25rem 1.5rem; margin-bottom: 14px;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: var(--border2); }
+
+  /* Event card specifics */
+  .event-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  .event-title { font-size: 16px; font-weight: 600; letter-spacing: -0.2px; margin-bottom: 5px; }
+  .event-meta { display: flex; flex-wrap: wrap; gap: 10px; }
+  .meta-item { font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 4px; }
+  .meta-item svg { opacity: 0.6; flex-shrink: 0; }
+
+  /* Badge */
+  .badge { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px; white-space: nowrap; font-family: 'DM Mono', monospace; }
+  .badge-open { background: var(--green-dim); color: var(--green); border: 0.5px solid var(--green-border); }
+  .badge-full { background: var(--red-dim); color: var(--red); border: 0.5px solid rgba(240,91,91,0.3); }
+  .badge-admin { background: var(--amber-dim); color: var(--amber); border: 0.5px solid rgba(240,168,50,0.3); }
+
+  /* Progress bar */
+  .progress { height: 3px; background: var(--bg3); border-radius: 2px; margin: 10px 0 6px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--green); border-radius: 2px; transition: width 0.4s ease; }
+
+  /* Roles section */
+  .roles-section { border-top: 0.5px solid var(--border); padding-top: 12px; margin-top: 8px; }
+  .roles-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; font-family: 'DM Mono', monospace; }
+  .roles-grid { display: flex; flex-wrap: wrap; gap: 7px; }
+
+  /* Role chips */
+  .chip {
+    padding: 6px 13px; border-radius: var(--radius); border: 0.5px solid var(--border2);
+    font-size: 12px; cursor: pointer; background: var(--bg3); color: var(--text2);
+    transition: all 0.15s; font-family: 'DM Sans', sans-serif;
+  }
+  .chip:hover { border-color: var(--green-border); color: var(--green); background: var(--green-dim); }
+  .chip-taken { background: var(--bg); color: var(--text3); border-color: var(--border); cursor: default; }
+  .chip-taken:hover { border-color: var(--border); color: var(--text3); background: var(--bg); }
+  .chip-mine { background: var(--green-dim); color: var(--green); border-color: var(--green-border); }
+  .chip-mine:hover { background: var(--red-dim); color: var(--red); border-color: rgba(240,91,91,0.3); }
+
+  /* Signup inline form */
+  .signup-box {
+    margin-top: 12px; background: var(--bg3); border: 0.5px solid var(--border2);
+    border-radius: var(--radius); padding: 14px; animation: slideIn 0.15s ease;
+  }
+  @keyframes slideIn { from { opacity:0; transform: translateY(-6px); } to { opacity:1; transform: translateY(0); } }
+  .signup-box-title { font-size: 13px; font-weight: 500; margin-bottom: 10px; }
+  .signup-box-title span { color: var(--green); }
+
+  /* Forms */
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 5px; font-family: 'DM Mono', monospace; }
+  input, textarea, select {
+    width: 100%; padding: 8px 12px; background: var(--bg); border: 0.5px solid var(--border2);
+    border-radius: var(--radius); color: var(--text); font-size: 14px; font-family: 'DM Sans', sans-serif;
+    outline: none; transition: border-color 0.15s;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--green); }
+  textarea { resize: vertical; min-height: 70px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-actions { display: flex; gap: 8px; margin-top: 14px; }
+
+  /* Tabs */
+  .tab-bar { display: flex; gap: 6px; margin-bottom: 1.5rem; }
+  .tab {
+    padding: 6px 16px; border-radius: var(--radius); border: 0.5px solid var(--border);
+    background: transparent; cursor: pointer; font-size: 13px; color: var(--text2);
+    transition: all 0.15s; font-family: 'DM Sans', sans-serif;
+  }
+  .tab.active { background: var(--bg2); color: var(--text); border-color: var(--border2); }
+
+  /* Auth screen */
+  .auth-wrap { min-height: 80vh; display: flex; align-items: center; justify-content: center; }
+  .auth-card { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 2rem; width: 100%; max-width: 380px; }
+  .auth-title { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+  .auth-sub { font-size: 13px; color: var(--text2); margin-bottom: 1.5rem; }
+  .auth-error { background: var(--red-dim); border: 0.5px solid rgba(240,91,91,0.3); border-radius: var(--radius); padding: 10px 14px; font-size: 13px; color: var(--red); margin-bottom: 12px; }
+
+  /* Admin roster */
+  .roster-role { margin-bottom: 12px; }
+  .roster-role-title { font-size: 12px; color: var(--text2); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; font-family: 'DM Mono', monospace; }
+  .roster-names { display: flex; flex-wrap: wrap; gap: 6px; }
+  .roster-name { font-size: 12px; padding: 4px 10px; background: var(--bg3); border: 0.5px solid var(--border); border-radius: 20px; color: var(--text2); }
+  .roster-empty { font-size: 12px; color: var(--text3); font-style: italic; }
+
+  /* Notes */
+  .event-notes { font-size: 13px; color: var(--text2); background: var(--bg3); border-left: 2px solid var(--border2); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; margin-top: 10px; }
+
+  /* Empty state */
+  .empty { text-align: center; padding: 3rem 1rem; color: var(--text3); }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.3; }
+  .empty p { font-size: 14px; }
+
+  /* Loading */
+  .loading { text-align: center; padding: 3rem; color: var(--text3); font-size: 14px; }
+  .spinner { width: 20px; height: 20px; border: 2px solid var(--border2); border-top-color: var(--green); border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; margin-right: 8px; vertical-align: -4px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--bg2); border: 0.5px solid var(--border2); border-radius: var(--radius);
+    padding: 10px 20px; font-size: 13px; color: var(--text); z-index: 100;
+    transition: transform 0.3s ease; white-space: nowrap; box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { border-color: var(--green-border); color: var(--green); }
+  .toast.error { border-color: rgba(240,91,91,0.3); color: var(--red); }
+
+  /* Top nav admin bar */
+  .admin-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--amber-dim); border: 0.5px solid rgba(240,168,50,0.2);
+    border-radius: var(--radius); padding: 8px 14px; margin-bottom: 1.5rem;
+    font-size: 13px; color: var(--amber);
+  }
+
+  /* Section header */
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+  .section-title { font-size: 13px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; font-family: 'DM Mono', monospace; }
+
+  /* Add event form */
+  .add-form-card { background: var(--bg2); border: 0.5px solid var(--green-border); border-radius: var(--radius-lg); padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; animation: slideIn 0.15s ease; }
+  .add-form-title { font-size: 15px; font-weight: 600; margin-bottom: 1rem; }
+
+  /* Divider */
+  hr { border: none; border-top: 0.5px solid var(--border); margin: 14px 0; }
+
+  @media (max-width: 540px) {
+    .row2 { grid-template-columns: 1fr; }
+    .header { padding: 1rem 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================== CONFIGURATION =====================
+  STEP 1: Replace the two values below with your Supabase credentials.
+  You'll find them in: Supabase Dashboard → Your Project → Settings → API
+  See SETUP-GUIDE.md for full instructions.
+============================================================ -->
+<script>
+  const SUPABASE_URL = 'https://rctjocfzxxzidjywhvvd.supabase.co';       // e.g. https://abcdefgh.supabase.co
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjdGpvY2Z6eHh6aWRqeXdodnZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1MTQ3NTEsImV4cCI6MjA5NDA5MDc1MX0.LNITX9rMTgwN5iRH4bn-QV7k7FRHGxTBCkzMwSDk8PE'; // long string starting with eyJ...
+</script>
+<!-- ========================================================= -->
+
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Supabase client ──────────────────────────────────────────
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ── App state ────────────────────────────────────────────────
+const state = {
+  user: null,
+  isAdmin: false,
+  view: 'public',        // 'public' | 'admin' | 'login'
+  tab: 'upcoming',
+  events: [],
+  signups: [],
+  loading: true,
+  signupTarget: null,    // { eventId, role }
+  showAddForm: false,
+  guestName: localStorage.getItem('guestName') || '',
+};
+
+// ── Toast ────────────────────────────────────────────────────
+function toast(msg, type = 'success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast ${type} show`;
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ── Auth helpers ─────────────────────────────────────────────
+async function loadUser() {
+  const { data: { session } } = await sb.auth.getSession();
+  state.user = session?.user || null;
+  state.isAdmin = !!state.user;
+  state.view = state.isAdmin ? 'admin' : 'public';
+}
+
+async function login(email, password) {
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  await loadUser();
+}
+
+async function logout() {
+  await sb.auth.signOut();
+  state.user = null;
+  state.isAdmin = false;
+  state.view = 'public';
+  render();
+}
+
+// ── Data helpers ──────────────────────────────────────────────
+async function loadData() {
+  const [{ data: events }, { data: signups }] = await Promise.all([
+    sb.from('events').select('*').order('date', { ascending: true }),
+    sb.from('signups').select('*'),
+  ]);
+  state.events = events || [];
+  state.signups = signups || [];
+  state.loading = false;
+}
+
+async function addEvent(ev) {
+  const { error } = await sb.from('events').insert([ev]);
+  if (error) throw error;
+  await loadData();
+}
+
+async function deleteEvent(id) {
+  await sb.from('signups').delete().eq('event_id', id);
+  const { error } = await sb.from('events').delete().eq('id', id);
+  if (error) throw error;
+  await loadData();
+}
+
+async function addSignup(eventId, role, name) {
+  const { error } = await sb.from('signups').insert([{ event_id: eventId, role, name }]);
+  if (error) throw error;
+  await loadData();
+}
+
+async function removeSignup(eventId, role, name) {
+  const { error } = await sb.from('signups').delete()
+    .eq('event_id', eventId).eq('role', role).eq('name', name);
+  if (error) throw error;
+  await loadData();
+}
+
+// ── Computed helpers ──────────────────────────────────────────
+function signupsFor(eventId) {
+  return state.signups.filter(s => s.event_id === eventId);
+}
+
+function roleCount(eventId, role) {
+  return state.signups.filter(s => s.event_id === eventId && s.role === role).length;
+}
+
+function uniqueRoles(ev) {
+  return [...new Set((ev.roles || '').split(',').map(r => r.trim()).filter(Boolean))];
+}
+
+function totalSlots(ev) {
+  return (ev.roles || '').split(',').map(r => r.trim()).filter(Boolean).length;
+}
+
+function filledSlots(eventId) {
+  return state.signups.filter(s => s.event_id === eventId).length;
+}
+
+function slotLimit(ev, role) {
+  const all = (ev.roles || '').split(',').map(r => r.trim()).filter(Boolean);
+  return all.filter(r => r === role).length;
+}
+
+function formatDate(d) {
+  if (!d) return '';
+  const dt = new Date(d + 'T12:00:00');
+  return dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function isUpcoming(ev) {
+  return new Date(ev.date + 'T23:59:59') >= new Date();
+}
+
+// ── SVG icons (inline, no external dependency) ───────────────
+const icon = {
+  calendar: `<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M1 7h14M5 1v4M11 1v4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>`,
+  clock: `<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.4"/><path d="M8 5v3.5l2.5 1.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>`,
+  pin: `<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 1C5.79 1 4 2.79 4 5c0 3 4 9 4 9s4-6 4-9c0-2.21-1.79-4-4-4z" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="5" r="1.5" stroke="currentColor" stroke-width="1.2"/></svg>`,
+  check: `<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 8l4 4 6-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  trash: `<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 10h8L13 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  plus: `<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+  logout: `<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3M10 11l4-4-4-4M14 8H6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  shield: `<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 1L2 4v4c0 3.5 2.5 6 6 7 3.5-1 6-3.5 6-7V4L8 1z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>`,
+};
+
+// ── Render ────────────────────────────────────────────────────
+function render() {
+  document.getElementById('app').innerHTML = buildApp();
+  attachHandlers();
+}
+
+function buildApp() {
+  return `
+    <div class="app">
+      ${buildHeader()}
+      ${state.loading ? buildLoading() : buildContent()}
+    </div>`;
+}
+
+function buildHeader() {
+  return `
+    <div class="header">
+      <div class="logo"><span class="logo-dot"></span> EventCrew</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        ${state.isAdmin
+          ? `<span style="font-size:12px;color:var(--amber);font-family:'DM Mono',monospace">${icon.shield} admin</span>
+             <button class="btn btn-sm" id="logout-btn">${icon.logout} Sign out</button>`
+          : `<button class="btn btn-sm" id="show-login-btn">${icon.shield} Admin login</button>`
+        }
+      </div>
+    </div>`;
+}
+
+function buildLoading() {
+  return `<div class="loading"><span class="spinner"></span>Loading events…</div>`;
+}
+
+function buildContent() {
+  if (state.view === 'login') return buildLogin();
+  if (state.view === 'admin') return buildAdmin();
+  return buildPublic();
+}
+
+// ── Public view ───────────────────────────────────────────────
+function buildPublic() {
+  const now = new Date();
+  const upcoming = state.events.filter(e => isUpcoming(e));
+  const past = state.events.filter(e => !isUpcoming(e));
+  const list = state.tab === 'upcoming' ? upcoming : past;
+
+  let html = `
+    <div style="margin-bottom:1.5rem">
+      <div style="font-size:24px;font-weight:600;letter-spacing:-0.5px;margin-bottom:4px">Open events</div>
+      <div style="font-size:14px;color:var(--text2)">Click a role to join the crew for an event.</div>
+    </div>
+    <div class="tab-bar">
+      <button class="tab${state.tab === 'upcoming' ? ' active' : ''}" data-tab="upcoming">Upcoming (${upcoming.length})</button>
+      <button class="tab${state.tab === 'past' ? ' active' : ''}" data-tab="past">Past (${past.length})</button>
+    </div>`;
+
+  if (!list.length) {
+    html += `<div class="empty">
+      <div class="empty-icon">📅</div>
+      <p>${state.tab === 'upcoming' ? 'No upcoming events yet. Check back soon!' : 'No past events.'}</p>
+    </div>`;
+    return html;
+  }
+
+  list.forEach(ev => {
+    const total = totalSlots(ev);
+    const filled = filledSlots(ev.id);
+    const open = total - filled;
+    const pct = total ? Math.round((filled / total) * 100) : 0;
+    const isFull = open <= 0;
+    const evSignups = signupsFor(ev.id);
+    const isSignupOpen = state.signupTarget?.eventId === ev.id;
+
+    html += `<div class="card">
+      <div class="event-header">
+        <div>
+          <div class="event-title">${ev.title}</div>
+          <div class="event-meta">
+            <span class="meta-item">${icon.calendar} ${formatDate(ev.date)}</span>
+            ${ev.time ? `<span class="meta-item">${icon.clock} ${ev.time}</span>` : ''}
+            ${ev.location ? `<span class="meta-item">${icon.pin} ${ev.location}</span>` : ''}
+          </div>
+        </div>
+        <span class="badge ${isFull ? 'badge-full' : 'badge-open'}">${isFull ? 'Full' : open + ' open'}</span>
+      </div>
+      <div class="progress"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace">${filled}/${total} filled</div>
+      ${ev.notes ? `<div class="event-notes">${ev.notes}</div>` : ''}
+      <div class="roles-section">
+        <div class="roles-label">Available roles</div>
+        <div class="roles-grid">
+          ${uniqueRoles(ev).map(role => {
+            const limit = slotLimit(ev, role);
+            const taken = roleCount(ev.id, role);
+            const mySignup = evSignups.find(s => s.role === role && s.name === state.guestName);
+            if (mySignup) {
+              return `<div class="chip chip-mine" data-unsign="${ev.id}" data-role="${role}" title="Click to cancel your signup">${icon.check} ${role} — you</div>`;
+            }
+            if (taken >= limit) {
+              return `<div class="chip chip-taken">${role} (full)</div>`;
+            }
+            return `<div class="chip" data-signup="${ev.id}" data-role="${role}">${role} (${limit - taken} left)</div>`;
+          }).join('')}
+        </div>
+      </div>
+      ${isSignupOpen ? buildSignupBox(ev) : ''}
+    </div>`;
+  });
+
+  return html;
+}
+
+function buildSignupBox(ev) {
+  return `<div class="signup-box">
+    <div class="signup-box-title">Signing up for: <span>${state.signupTarget.role}</span></div>
+    <div class="field">
+      <label>Your name</label>
+      <input type="text" id="guest-name-input" placeholder="e.g. Jamie Smith" value="${state.guestName}" autocomplete="name">
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary btn-sm" id="confirm-signup-btn" data-event-id="${ev.id}" data-role="${state.signupTarget.role}">
+        ${icon.check} Confirm signup
+      </button>
+      <button class="btn btn-sm" id="cancel-signup-btn">Cancel</button>
+    </div>
+  </div>`;
+}
+
+// ── Admin view ────────────────────────────────────────────────
+function buildAdmin() {
+  let html = `
+    <div class="admin-bar">
+      <span>${icon.shield} Admin mode — only you can see this panel</span>
+      <span style="font-size:12px;color:var(--text2)">${state.user?.email}</span>
+    </div>
+    <div class="section-header">
+      <span class="section-title">All events</span>
+      <button class="btn btn-primary btn-sm" id="toggle-add-form-btn">${icon.plus} Add event</button>
+    </div>`;
+
+  if (state.showAddForm) html += buildAddForm();
+
+  const sorted = [...state.events].sort((a, b) => a.date > b.date ? 1 : -1);
+
+  if (!sorted.length) {
+    html += `<div class="empty"><div class="empty-icon">📋</div><p>No events yet. Add your first confirmed event above.</p></div>`;
+    return html;
+  }
+
+  sorted.forEach(ev => {
+    const total = totalSlots(ev);
+    const filled = filledSlots(ev.id);
+    const evSignups = signupsFor(ev.id);
+
+    html += `<div class="card">
+      <div class="event-header">
+        <div>
+          <div class="event-title">${ev.title}</div>
+          <div class="event-meta">
+            <span class="meta-item">${icon.calendar} ${formatDate(ev.date)}</span>
+            ${ev.time ? `<span class="meta-item">${icon.clock} ${ev.time}</span>` : ''}
+            ${ev.location ? `<span class="meta-item">${icon.pin} ${ev.location}</span>` : ''}
+          </div>
+        </div>
+        <span class="badge badge-admin">${filled}/${total}</span>
+      </div>
+      ${ev.notes ? `<div class="event-notes">${ev.notes}</div>` : ''}
+      <hr>
+      <div class="roles-label" style="margin-bottom:10px">Roster</div>
+      ${uniqueRoles(ev).map(role => {
+        const names = evSignups.filter(s => s.role === role);
+        const limit = slotLimit(ev, role);
+        return `<div class="roster-role">
+          <div class="roster-role-title">${role} <span style="color:var(--text3)">${names.length}/${limit}</span></div>
+          <div class="roster-names">
+            ${names.length
+              ? names.map(s => `<span class="roster-name">${s.name}</span>`).join('')
+              : `<span class="roster-empty">No signups yet</span>`
+            }
+          </div>
+        </div>`;
+      }).join('')}
+      <hr>
+      <button class="btn btn-danger btn-sm" data-delete="${ev.id}">${icon.trash} Delete event</button>
+    </div>`;
+  });
+
+  return html;
+}
+
+function buildAddForm() {
+  const today = new Date().toISOString().split('T')[0];
+  return `<div class="add-form-card">
+    <div class="add-form-title">New confirmed event</div>
+    <div class="row2">
+      <div class="field"><label>Event name *</label><input type="text" id="f-title" placeholder="e.g. Riverside Music Festival"></div>
+      <div class="field"><label>Date *</label><input type="date" id="f-date" min="${today}"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Time</label><input type="text" id="f-time" placeholder="e.g. 2:00 PM – 9:00 PM"></div>
+      <div class="field"><label>Location</label><input type="text" id="f-loc" placeholder="Venue, City"></div>
+    </div>
+    <div class="field"><label>Notes for crew</label><textarea id="f-notes" placeholder="Load-in time, dress code, parking info…"></textarea></div>
+    <div class="field">
+      <label>Roles needed (comma-separated — repeat a role to allow multiple signups)</label>
+      <input type="text" id="f-roles" placeholder="e.g. AV Tech, Stage Hand, Stage Hand, Runner, Runner">
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" id="save-event-btn">${icon.check} Save event</button>
+      <button class="btn" id="cancel-add-btn">Cancel</button>
+    </div>
+  </div>`;
+}
+
+// ── Login view ────────────────────────────────────────────────
+function buildLogin() {
+  return `<div class="auth-wrap">
+    <div class="auth-card">
+      <div class="auth-title">Admin login</div>
+      <div class="auth-sub">Sign in with your Supabase account to manage events.</div>
+      <div id="auth-error" style="display:none" class="auth-error"></div>
+      <div class="field"><label>Email</label><input type="email" id="login-email" placeholder="you@example.com" autocomplete="email"></div>
+      <div class="field"><label>Password</label><input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"></div>
+      <div class="form-actions">
+        <button class="btn btn-primary" id="do-login-btn">${icon.check} Sign in</button>
+        <button class="btn" id="cancel-login-btn">Cancel</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Event handlers ────────────────────────────────────────────
+function attachHandlers() {
+
+  // Tabs
+  document.querySelectorAll('[data-tab]').forEach(el => {
+    el.addEventListener('click', () => { state.tab = el.dataset.tab; render(); });
+  });
+
+  // Header nav
+  document.getElementById('logout-btn')?.addEventListener('click', logout);
+  document.getElementById('show-login-btn')?.addEventListener('click', () => { state.view = 'login'; render(); });
+  document.getElementById('cancel-login-btn')?.addEventListener('click', () => { state.view = 'public'; render(); });
+
+  // Login form
+  document.getElementById('do-login-btn')?.addEventListener('click', async () => {
+    const email = document.getElementById('login-email').value.trim();
+    const pass = document.getElementById('login-pass').value;
+    const errEl = document.getElementById('auth-error');
+    if (!email || !pass) { errEl.textContent = 'Please enter email and password.'; errEl.style.display = 'block'; return; }
+    document.getElementById('do-login-btn').disabled = true;
+    try {
+      await login(email, pass);
+      render();
+    } catch (e) {
+      errEl.textContent = e.message || 'Login failed. Check your credentials.';
+      errEl.style.display = 'block';
+      document.getElementById('do-login-btn').disabled = false;
+    }
+  });
+
+  // Signup chips
+  document.querySelectorAll('[data-signup]').forEach(el => {
+    el.addEventListener('click', () => {
+      state.signupTarget = { eventId: parseInt(el.dataset.signup), role: el.dataset.role };
+      render();
+      setTimeout(() => document.getElementById('guest-name-input')?.focus(), 50);
+    });
+  });
+
+  // Unsign chips
+  document.querySelectorAll('[data-unsign]').forEach(el => {
+    el.addEventListener('click', async () => {
+      if (!state.guestName) return;
+      await removeSignup(parseInt(el.dataset.unsign), el.dataset.role, state.guestName);
+      toast('Signup cancelled.');
+      render();
+    });
+  });
+
+  // Confirm signup
+  document.getElementById('confirm-signup-btn')?.addEventListener('click', async () => {
+    const name = document.getElementById('guest-name-input').value.trim();
+    if (!name) { toast('Please enter your name.', 'error'); return; }
+    state.guestName = name;
+    localStorage.setItem('guestName', name);
+    const { eventId, role } = state.signupTarget;
+    document.getElementById('confirm-signup-btn').disabled = true;
+    try {
+      await addSignup(eventId, role, name);
+      state.signupTarget = null;
+      toast(`Signed up as ${name} — ${role}!`);
+      render();
+    } catch (e) {
+      toast('Could not save signup. Try again.', 'error');
+      document.getElementById('confirm-signup-btn').disabled = false;
+    }
+  });
+
+  document.getElementById('cancel-signup-btn')?.addEventListener('click', () => {
+    state.signupTarget = null;
+    render();
+  });
+
+  // Admin — toggle add form
+  document.getElementById('toggle-add-form-btn')?.addEventListener('click', () => {
+    state.showAddForm = !state.showAddForm;
+    render();
+  });
+  document.getElementById('cancel-add-btn')?.addEventListener('click', () => {
+    state.showAddForm = false;
+    render();
+  });
+
+  // Admin — save event
+  document.getElementById('save-event-btn')?.addEventListener('click', async () => {
+    const title = document.getElementById('f-title').value.trim();
+    const date = document.getElementById('f-date').value;
+    if (!title || !date) { toast('Event name and date are required.', 'error'); return; }
+    const ev = {
+      title,
+      date,
+      time: document.getElementById('f-time').value.trim(),
+      location: document.getElementById('f-loc').value.trim(),
+      notes: document.getElementById('f-notes').value.trim(),
+      roles: document.getElementById('f-roles').value.trim(),
+    };
+    document.getElementById('save-event-btn').disabled = true;
+    try {
+      await addEvent(ev);
+      state.showAddForm = false;
+      toast('Event added!');
+      render();
+    } catch (e) {
+      toast('Could not save event. ' + e.message, 'error');
+      document.getElementById('save-event-btn').disabled = false;
+    }
+  });
+
+  // Admin — delete event
+  document.querySelectorAll('[data-delete]').forEach(el => {
+    el.addEventListener('click', async () => {
+      if (!confirm('Delete this event and all its signups?')) return;
+      await deleteEvent(parseInt(el.dataset.delete));
+      toast('Event deleted.');
+      render();
+    });
+  });
+
+  // Allow Enter key in login
+  document.getElementById('login-pass')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('do-login-btn')?.click();
+  });
+
+  // Allow Enter key in signup
+  document.getElementById('guest-name-input')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('confirm-signup-btn')?.click();
+  });
+}
+
+// ── Boot ──────────────────────────────────────────────────────
+(async () => {
+  render(); // show loading state immediately
+  await loadUser();
+  await loadData();
+  render();
+
+  // Live updates via Supabase realtime
+  sb.channel('public-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, loadData)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'signups' }, async () => {
+      await loadData();
+      render();
+    })
+    .subscribe();
+})();
+</script>
+</body>
+</html>
