@@ -239,6 +239,7 @@ const state = {
   loading: true,
   signupTarget: null,    // { eventId, role }
   showAddForm: false,
+  editEventId: null,
   guestName: localStorage.getItem('guestName') || '',
 };
 
@@ -292,6 +293,12 @@ async function addEvent(ev) {
 async function deleteEvent(id) {
   await sb.from('signups').delete().eq('event_id', id);
   const { error } = await sb.from('events').delete().eq('id', id);
+  if (error) throw error;
+  await loadData();
+}
+
+async function updateEvent(id, ev) {
+  const { error } = await sb.from('events').update(ev).eq('id', id);
   if (error) throw error;
   await loadData();
 }
@@ -360,6 +367,7 @@ const icon = {
   plus: `<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
   logout: `<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3M10 11l4-4-4-4M14 8H6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   shield: `<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 1L2 4v4c0 3.5 2.5 6 6 7 3.5-1 6-3.5 6-7V4L8 1z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>`,
+  pencil: `<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M11 2l3 3-8 8H3v-3l8-8z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>`,
 };
 
 // ── Render ────────────────────────────────────────────────────
@@ -544,7 +552,11 @@ function buildAdmin() {
         </div>`;
       }).join('')}
       <hr>
-      <button class="btn btn-danger btn-sm" data-delete="${ev.id}">${icon.trash} Delete event</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-sm" data-edit="${ev.id}">${icon.pencil} Edit event</button>
+        <button class="btn btn-danger btn-sm" data-delete="${ev.id}">${icon.trash} Delete event</button>
+      </div>
+      ${state.editEventId === ev.id ? buildEditForm(ev) : ''}
     </div>`;
   });
 
@@ -572,6 +584,30 @@ function buildAddForm() {
     <div class="form-actions">
       <button class="btn btn-primary" id="save-event-btn">${icon.check} Save event</button>
       <button class="btn" id="cancel-add-btn">Cancel</button>
+    </div>
+  </div>`;
+}
+
+function buildEditForm(ev) {
+  return `<div class="add-form-card" style="margin-top:14px;border-color:rgba(240,168,50,0.4)">
+    <div class="add-form-title" style="color:var(--amber)">Edit event</div>
+    <div class="row2">
+      <div class="field"><label>Event name *</label><input type="text" id="ef-title" value="${ev.title || ''}"></div>
+      <div class="field"><label>Time</label><input type="text" id="ef-time" value="${ev.time || ''}" placeholder="e.g. 2:00 PM – 9:00 PM"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Start date *</label><input type="date" id="ef-date" value="${ev.date || ''}"></div>
+      <div class="field"><label>End date (leave blank if single day)</label><input type="date" id="ef-end-date" value="${ev.end_date || ''}"></div>
+    </div>
+    <div class="field"><label>Location</label><input type="text" id="ef-loc" value="${ev.location || ''}" placeholder="Venue, City"></div>
+    <div class="field"><label>Notes for crew</label><textarea id="ef-notes">${ev.notes || ''}</textarea></div>
+    <div class="field">
+      <label>Roles needed (comma-separated — repeat a role to allow multiple signups)</label>
+      <input type="text" id="ef-roles" value="${ev.roles || ''}" placeholder="e.g. AV Tech, Stage Hand, Stage Hand, Runner">
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" id="save-edit-btn" data-id="${ev.id}">${icon.check} Save changes</button>
+      <button class="btn" id="cancel-edit-btn">Cancel</button>
     </div>
   </div>`;
 }
@@ -710,6 +746,49 @@ function attachHandlers() {
       toast('Event deleted.');
       render();
     });
+  });
+
+  // Admin — open edit form
+  document.querySelectorAll('[data-edit]').forEach(el => {
+    el.addEventListener('click', () => {
+      const id = parseInt(el.dataset.edit);
+      state.editEventId = state.editEventId === id ? null : id;
+      state.showAddForm = false;
+      render();
+    });
+  });
+
+  // Admin — cancel edit
+  document.getElementById('cancel-edit-btn')?.addEventListener('click', () => {
+    state.editEventId = null;
+    render();
+  });
+
+  // Admin — save edited event
+  document.getElementById('save-edit-btn')?.addEventListener('click', async () => {
+    const id = parseInt(document.getElementById('save-edit-btn').dataset.id);
+    const title = document.getElementById('ef-title').value.trim();
+    const date = document.getElementById('ef-date').value;
+    if (!title || !date) { toast('Event name and start date are required.', 'error'); return; }
+    const ev = {
+      title,
+      date,
+      end_date: document.getElementById('ef-end-date').value || null,
+      time: document.getElementById('ef-time').value.trim(),
+      location: document.getElementById('ef-loc').value.trim(),
+      notes: document.getElementById('ef-notes').value.trim(),
+      roles: document.getElementById('ef-roles').value.trim(),
+    };
+    document.getElementById('save-edit-btn').disabled = true;
+    try {
+      await updateEvent(id, ev);
+      state.editEventId = null;
+      toast('Event updated!');
+      render();
+    } catch (e) {
+      toast('Could not update event. ' + e.message, 'error');
+      document.getElementById('save-edit-btn').disabled = false;
+    }
   });
 
   // Allow Enter key in login
