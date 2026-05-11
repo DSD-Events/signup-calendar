@@ -335,14 +335,23 @@ function slotLimit(ev, role) {
   return all.filter(r => r === role).length;
 }
 
-function formatDate(d) {
-  if (!d) return '';
-  const dt = new Date(d + 'T12:00:00');
-  return dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+function formatDate(start, end) {
+  if (!start) return '';
+  const s = new Date(start + 'T12:00:00');
+  if (!end || end === start) {
+    return s.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  const e = new Date(end + 'T12:00:00');
+  const sameMonth = s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear();
+  if (sameMonth) {
+    return s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' – ' + e.toLocaleDateString('en-US', { day: 'numeric', year: 'numeric' });
+  }
+  return s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' – ' + e.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function isUpcoming(ev) {
-  return new Date(ev.date + 'T23:59:59') >= new Date();
+  const checkDate = ev.end_date || ev.date;
+  return new Date(checkDate + 'T23:59:59') >= new Date();
 }
 
 // ── SVG icons (inline, no external dependency) ───────────────
@@ -434,7 +443,7 @@ function buildPublic() {
         <div>
           <div class="event-title">${ev.title}</div>
           <div class="event-meta">
-            <span class="meta-item">${icon.calendar} ${formatDate(ev.date)}</span>
+            <span class="meta-item">${icon.calendar} ${formatDate(ev.date, ev.end_date)}</span>
             ${ev.time ? `<span class="meta-item">${icon.clock} ${ev.time}</span>` : ''}
             ${ev.location ? `<span class="meta-item">${icon.pin} ${ev.location}</span>` : ''}
           </div>
@@ -515,7 +524,7 @@ function buildAdmin() {
         <div>
           <div class="event-title">${ev.title}</div>
           <div class="event-meta">
-            <span class="meta-item">${icon.calendar} ${formatDate(ev.date)}</span>
+            <span class="meta-item">${icon.calendar} ${formatDate(ev.date, ev.end_date)}</span>
             ${ev.time ? `<span class="meta-item">${icon.clock} ${ev.time}</span>` : ''}
             ${ev.location ? `<span class="meta-item">${icon.pin} ${ev.location}</span>` : ''}
           </div>
@@ -552,12 +561,13 @@ function buildAddForm() {
     <div class="add-form-title">New confirmed event</div>
     <div class="row2">
       <div class="field"><label>Event name *</label><input type="text" id="f-title" placeholder="e.g. Riverside Music Festival"></div>
-      <div class="field"><label>Date *</label><input type="date" id="f-date" min="${today}"></div>
+      <div class="field"><label>Time</label><input type="text" id="f-time" placeholder="e.g. 2:00 PM – 9:00 PM"></div>
     </div>
     <div class="row2">
-      <div class="field"><label>Time</label><input type="text" id="f-time" placeholder="e.g. 2:00 PM – 9:00 PM"></div>
-      <div class="field"><label>Location</label><input type="text" id="f-loc" placeholder="Venue, City"></div>
+      <div class="field"><label>Start date *</label><input type="date" id="f-date" min="${today}"></div>
+      <div class="field"><label>End date (leave blank if single day)</label><input type="date" id="f-end-date" min="${today}"></div>
     </div>
+    <div class="field"><label>Location</label><input type="text" id="f-loc" placeholder="Venue, City"></div>
     <div class="field"><label>Notes for crew</label><textarea id="f-notes" placeholder="Load-in time, dress code, parking info…"></textarea></div>
     <div class="field">
       <label>Roles needed (comma-separated — repeat a role to allow multiple signups)</label>
@@ -674,10 +684,11 @@ function attachHandlers() {
   document.getElementById('save-event-btn')?.addEventListener('click', async () => {
     const title = document.getElementById('f-title').value.trim();
     const date = document.getElementById('f-date').value;
-    if (!title || !date) { toast('Event name and date are required.', 'error'); return; }
+    if (!title || !date) { toast('Event name and start date are required.', 'error'); return; }
     const ev = {
       title,
       date,
+      end_date: document.getElementById('f-end-date').value || null,
       time: document.getElementById('f-time').value.trim(),
       location: document.getElementById('f-loc').value.trim(),
       notes: document.getElementById('f-notes').value.trim(),
