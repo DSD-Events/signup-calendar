@@ -337,16 +337,12 @@ function slotLimit(ev, role) {
 
 function formatDate(start, end) {
   if (!start) return '';
+  const pad = n => String(n).padStart(2, '0');
+  const fmt = d => `${pad(d.getMonth()+1)}/${pad(d.getDate())}/${d.getFullYear()}`;
   const s = new Date(start + 'T12:00:00');
-  if (!end || end === start) {
-    return s.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-  }
+  if (!end || end === start) return fmt(s);
   const e = new Date(end + 'T12:00:00');
-  const sameMonth = s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear();
-  if (sameMonth) {
-    return s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' – ' + e.toLocaleDateString('en-US', { day: 'numeric', year: 'numeric' });
-  }
-  return s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' – ' + e.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return fmt(s) + ' \u2013 ' + fmt(e);
 }
 
 function isUpcoming(ev) {
